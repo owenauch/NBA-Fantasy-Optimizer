@@ -17,8 +17,12 @@ def make_soup(url):
 
 
 #returns list of lists (lol_table) of html table
-def lol_table(soup, class_name):
-	rows = soup.find_all('tr', class_ = class_name)
+def lol_table(soup, class_name = ""):
+	rows = []
+	if class_name is "":
+		rows = soup.find_all('tr')
+	else:
+		rows = soup.find_all('tr', class_ = class_name)
 	data = []
 	for row in rows:
 		cols = row.find_all('td')
@@ -28,12 +32,15 @@ def lol_table(soup, class_name):
 		data.append(data_row)
 	return data
 
+
 #create pandas dataframe from lol_table and create csv of it
 def to_pandas_csv(lol_table):
 	df = pandas.DataFrame(lol_table, columns=header)
 	df.to_csv("nba.csv")
 	return df
 
-soup = make_soup(url)
-lol_table = lol_table(soup, "full_table")
-data_frame = to_pandas_csv(lol_table)
+#to ensure it only runs this when called specifically
+if __name__ == '__main__':
+	soup = make_soup(url)
+	table = lol_table(soup, "full_table")
+	data_frame = to_pandas_csv(table)
