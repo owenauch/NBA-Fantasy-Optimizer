@@ -132,6 +132,3 @@ if __name__ == "__main__":
 	season_df = get_season_stats(season_stat_url, ctx)
 	season_desc_df = get_desc_stats(season_df)
 
-	print season_df.dtypes
-	print season_desc_df
-
