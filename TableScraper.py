@@ -34,13 +34,17 @@ def lol_table(soup, class_name = ""):
 
 
 #create pandas dataframe from lol_table and create csv of it
-def to_pandas_csv(lol_table):
-	df = pandas.DataFrame(lol_table, columns=header)
-	df.to_csv("nba.csv")
+def to_pandas_csv(lol_table, csv_name, column_names):
+	df = pandas.DataFrame(lol_table, columns=column_names)
+	df.to_csv(csv_name)
 	return df
 
+def to_pandas(lol_table, column_names):
+	df = pandas.DataFrame(lol_table, columns=column_names)
+	return df
+	
 #to ensure it only runs this when called specifically
 if __name__ == '__main__':
 	soup = make_soup(url)
 	table = lol_table(soup, "full_table")
-	data_frame = to_pandas_csv(table)
+	data_frame = to_pandas_csv(table, "nba.csv", header)
