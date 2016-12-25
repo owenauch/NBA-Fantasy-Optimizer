@@ -13,6 +13,7 @@ opp_turnovers_url = "https://www.teamrankings.com/nba/stat/opponent-turnovers-pe
 opp_blocks_url = "https://www.teamrankings.com/nba/stat/opponent-blocks-per-game"
 opp_steals_url = "https://www.teamrankings.com/nba/stat/opponent-steals-per-game"
 season_stat_url = "http://www.basketball-reference.com/leagues/NBA_2017_totals.html"
+season_advanced_url = "http://www.basketball-reference.com/leagues/NBA_2017_advanced.html"
 
 #verify set to false (not secure but doesn't really matter for this)
 def verify_false():
@@ -131,4 +132,10 @@ if __name__ == "__main__":
 	#call method to get season stats for each player
 	season_df = get_season_stats(season_stat_url, ctx)
 	season_desc_df = get_desc_stats(season_df)
+
+	#call method to get advanced stats for each player
+	season_advanced_df = get_season_stats(season_advanced_url, ctx)
+	advanced_desc_df = get_desc_stats(season_advanced_df)
+
+
 
