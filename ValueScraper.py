@@ -27,21 +27,19 @@ soup = ts.make_soup(url)
 # 	data.append(data_row)
 # return data
 
-print soup.prettify()
-# data = []
-# table_body = soup.find('tbody', {"id": "players"})
-# rows = table_body.findChildren('tr')
-# for row in rows:
-# 	data_row = []
-# 	for col in row.find_all('td'):
-# 		if col['class'][0] == "rwo-name":
-# 			data_row.append("dilf")
-# 			print "A"
-# 		else:
-# 			data_row.append(col.find(text=True))
-# 		print col['class']
-# 	data.append(data_row)
+data = []
+table_body = soup.find('tbody', {"id": "players"})
+for row in table_body.find_all('tr'):
+	data_row = []
+	for col in row.find_all('td'):
+		if col['class'][0] == "rwo-name":
+			data_row.append("dilf")
+			print "A"
+		else:
+			data_row.append(col.find(text=True))
+		print col['class']
+	data.append(data_row)
 
-# df = ts.to_pandas_csv(data, "values.csv", columns)
+df = ts.to_pandas_csv(data, "values.csv", columns)
 
 # print df
