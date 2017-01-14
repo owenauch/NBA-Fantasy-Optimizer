@@ -154,163 +154,8 @@ def get_desc_stats(df):
 	stdevs = df.std()
 	stdevs = stdevs.rename("stdev")
 	desc_stats = pandas.concat([means, stdevs], axis=1)
-	return desc_stats
-
-#get estimated fantasy stats in a game for a player
-#this number is unadjusted for opposition defense
-def salary_stats(season, advanced, salary):
-	#loops through each player playing tonight
-	player_column = salary['Player']
-
-	cats_list = ["Player", "G", "PTS", "ORB", "DRB", "AST", "STL", "BLK", "TOV", "USG%", "ORG%", "DRB%", "AST%", "STL%", "BLK%", "TOV%", "Salary", "POS"]
-	#list of lists
-	stat_lol = []
-	for idx, player in enumerate(player_column):
-		player_series = season.loc[season['Player'] == player].squeeze()
-		player_series_advanced = advanced.loc[advanced['Player'] == player].squeeze()
-		stats = []
-
-		#player name
-		stats.append(player)
-
-		#games played
-		gp = player_series["G"]
-		stats.append(gp)
-
-		#points
-		pts = player_series["PTS"]
-		stats.append(pts)
-
-		#offensive rebounds
-		orb = player_series["ORB"]
-		stats.append(orb)
-
-		#defensive rebounds
-		drb = player_series["DRB"]
-		stats.append(drb)
-
-		#assists
-		ast = player_series["AST"]
-		stats.append(ast)
-
-		#steals
-		stl = player_series["STL"]
-		stats.append(stl)
-
-		#blocks
-		blk = player_series["BLK"]
-		stats.append(blk)
-
-		#turnovers
-		tov = player_series["TOV"]
-		stats.append(tov)
-
-		#usage percentage (correlates to points)
-		#higher means you use more possessions
-		usg = player_series_advanced["USG%"]
-		stats.append(usg)
-
-		#offensive rebound percentage
-		orb_per = player_series_advanced["ORB%"]
-		stats.append(orb_per)
-
-		#defensive rebound percentage
-		drb_per = player_series_advanced["DRB%"]
-		stats.append(drb_per)
-
-		#assist percentage
-		ast_per = player_series_advanced["AST%"]
-		stats.append(ast_per)
-
-		#steal percentage
-		stl_per = player_series_advanced["STL%"]
-		stats.append(stl_per)
-
-		#block percentage
-		blk_per = player_series_advanced["BLK%"]
-		stats.append(blk_per)
-
-		#turnover rate
-		tov_per = player_series_advanced["TOV%"]
-		stats.append(tov_per)
-
-		stats.append(salary["Salary"][idx])
-
-		stats.append(player_series["Pos"])
-
-		#add row to list of lists
-		stat_lol.append(stats)
-
-	#make into pandas
-	stats_df = pandas.DataFrame(stat_lol, columns = cats_list)
-
-	return stats_df
-
-#adjusts statistics based on opponent defense
-#sets the stats as per game
-#and returns a dataframe with the adjusted stats
-def adjust_stats(salary_stats, season_desc, advanced_desc, opp_stat, opp_desc):
-	# print "Salary Stats"
-	# print salary_stats
-	# print "Season Desc"
-	# print season_desc
-	# print "Advanced Desc"
-	# print advanced_desc
-	# print "Opp Stat"
-	# print opp_stat
-	# print "Opponent Desc"
-	# print opp_desc
-	return None
-
-#returns df of player, salary and points
-def get_points_salary(salary_stats):
-
-	points_values = []
-	for player in salary_stats.itertuples():
-		row = []
-		gp = player[2]
-
-		#fantasy points per game from PTS (index 3)
-		fan_pts = (player[3]/gp) * POINT
-
-		#fantasy points per game from REBOUNDS (index 4 + 5)
-		fan_rbs = ((player[4] + player[5])/gp) * REBOUND
-
-		#fantasy points per game from AST (index 6)
-		fan_ast = (player[6]/gp) * ASSIST
-
-		#fantasy points per game from STL (index 7)
-		fan_stl = (player[7]/gp) * STEAL
-
-		#fantasy points per game from BLK (index 8)
-		fan_blk = (player[8]/gp) * BLOCK
-
-		#fantasy points per game from TOV (index 9)
-		fan_tov = (player[9]/gp) * TO
-
-		fan_total = fan_pts + fan_rbs + fan_ast + fan_stl + fan_blk + fan_tov
-		salary = player[17]
-		name = player[1]
-		position = player[18]
-
-		#each row has name, salary and fantasy point total
-		row.append(name)
-		row.append(position)
-		row.append(salary)
-		row.append(fan_total)
-		points_values.append(row)
-
-	points_and_salary = pandas.DataFrame(points_values, columns=["Player", "Salary", "Fantasy Points", "Position"])
-	return points_and_salary
-
-#finds optimized lineup based on points per dollar and salary
-def optimize_players(points_salary):
-	print "a"
-
-
-	
+	return desc_stats	
 		
-
 if __name__ == "__main__":
 	#check which algorithm
 	is_advanced = check_algorithm()
@@ -370,18 +215,10 @@ if __name__ == "__main__":
 	df_list.append(salary_df)
 	df_list.append(salary_desc_df)
 
-	#df of salary and stats
-	salary_stats_df = salary_stats(season_df, season_advanced_df, salary_df)
-
 	if is_advanced:
-		#df of stats adjusted for opposing team
-		adjusted_stats_df = adjust_stats(salary_stats_df, season_desc_df, advanced_desc_df, opp_stat_df, opp_stat_desc)
+		print "not done yet"
 	else:
-		#gets df of players, salaries and points
-		points_salary_df = get_points_salary(salary_stats_df)
-		#finds optimized lineups
-		print points_salary_df
-		optimize_players(points_salary_df)
+		print "not done yet"
 
 
 
