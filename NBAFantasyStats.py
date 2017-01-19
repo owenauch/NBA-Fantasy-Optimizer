@@ -240,6 +240,7 @@ def greedy_knap(avail_players):
 				player_sal = 0
 				player_ppg = 0
 				player_slot = 0
+				other_player = None
 
 				if len(position[3]) == 2:
 					for players in position[3]:
@@ -256,32 +257,37 @@ def greedy_knap(avail_players):
 							player_sal = player_2["Salary"]
 							player_ppg = player_2["PPG"]
 							player_slot = 1
+							other_player = player_1
 
 						else:
 							player = player_1["Player"]
 							player_sal = player_1["Salary"]
 							player_ppg = player_1["PPG"]
-				
+							other_player = player_2
+
 				#if there's one player, just do that
 				else:
 					player_row = avail_players.loc[avail_players['Player'] == position[3][0]]
 					player = player_row["Player"]
 					player_sal = player_row["Salary"]
 					player_ppg = player_row["PPG"] 
+					other_player = player_row
 
 				#if the player's ppg is higher than the lowest at their position
 				player_ppg = player_ppg.values[0]
 				player_sal = player_sal.values[0]
 				player = player.values[0]
 
-				if (row["PPG"] > player_ppg):
-					#if we can afford him
-					if (row["Salary"] + current_sal - player_sal <= salary_cap):
-						#replace the player in the squad
-						current_sal = current_sal - player_sal + row["Salary"]
-						position[3][player_slot] = row["Player"]
-						squad_pos = position[4]
-						squad[squad_pos] = position
+				#if it isn't a duplicate
+				if (other_player["Player"].values[0] != row["Player"]):
+					if (row["PPG"] > player_ppg):
+						#if we can afford him
+						if (row["Salary"] + current_sal - player_sal <= salary_cap):
+							#replace the player in the squad
+							current_sal = current_sal - player_sal + row["Salary"]
+							position[3][player_slot] = row["Player"]
+							squad_pos = position[4]
+							squad[squad_pos] = position
 
 	#get player names in a list
 	best_squad = []
@@ -316,7 +322,7 @@ def stringify_lineup(line):
 
 if __name__ == "__main__":
 
-	print "\nFetching NBA statistics and determining optimal lineup\n\n"
+	print "\nFetching NBA statistics and determining optimal lineup...\n\n"
 
 	ctx = verify_false()
 	series_list = []
