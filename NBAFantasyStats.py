@@ -318,6 +318,30 @@ def stringify_lineup(line):
 	stringy_line += "\n"
 
 	return stringy_line
+
+#have injured players taken out of the lineup
+def manual_injury(ppg, line):
+	py3 = version_info[0] > 2 #creates boolean value for test that Python major version > 2
+	injured = "y"
+
+	while (injured == "y"):
+		if py3:
+			injured = input("Are any of the players in this lineup injured? (y/n)\n")
+		else:
+			injured = raw_input("Are any of the players in this lineup injured? (y/n)\n")
+
+		injured = injured.lower()
+
+		if (injured == "y"):
+			if py3:
+		  		player = input("Enter the injured player's name exactly: ")
+			else:
+		  		player = raw_input("Enter the injured player's name exactly: ")
+
+		  	ppg = ppg[ppg["Player"] != player]
+
+		  	print stringify_lineup(greedy_knap(ppg))
+
 		
 
 if __name__ == "__main__":
@@ -388,6 +412,8 @@ if __name__ == "__main__":
 	pretty_lineup = stringify_lineup(lineup)
 
 	print pretty_lineup
+
+	uninjured_pretty = manual_injury(ppg_simple_df, pretty_lineup)
 
 
 
