@@ -23,32 +23,15 @@ REBOUND = 1.2
 ASSIST = 1.5
 STEAL = 2
 BLOCK = 2
-TO = -1
+TOV = -1
 
-#checks which algorithm the user would like to use
-#the simple algorithm doesn't adjust for opponent defense
-def check_algorithm():
-	py3 = version_info[0] > 2 #creates boolean value for test that Python major version > 2
-
-	response = ''
-	if py3:
-	  response = input("Welcome to the NBA Daily Fantasy Lineup Optimizer. Type 'simple' to use the simple algorithm or 'advanced' to use the advanced algorithm: ")
-	else:
-	  response = raw_input("Welcome to the NBA Daily Fantasy Lineup Optimizer. Type 'simple' to use the simple algorithm or 'advanced' to use the advanced algorithm: ")
-
-	response = response.lower()
-
-	#false if simple, true if advanced
-	algo_bool = True
-	if response == "simple":
-		algo_bool = False
-	elif response == "advanced":
-		algo_bool = True
-	else:
-		print "Your input is not being recognized. Please try again."
-		check_algorithm()
-
-	return algo_bool
+#2 PG, 2 SG, 2 SF, 2 PF, 1 C
+salary_cap = 60000
+PG_cap = 2
+SG_cap = 2
+SF_cap = 2
+PF_cap = 2
+C_cap = 1
 
 #verify set to false (not secure but doesn't really matter for this)
 def verify_false():
@@ -155,47 +138,220 @@ def get_desc_stats(df):
 	stdevs = stdevs.rename("stdev")
 	desc_stats = pandas.concat([means, stdevs], axis=1)
 	return desc_stats	
+
+#gets df of players playing tonight with "Player", "POS", "PPG", "Salary" columns
+def get_simple_ppg(season, salary):
+	#loops through each player playing tonight
+	player_column = salary['Player']
+
+	list = []
+
+	#goes through all players playing tonight and presents their season stats as a Series
+	for idx, player in enumerate(player_column):
+		player_series = season.loc[season['Player'] == player].squeeze()
+
+		#screen out ones where it doesn't match -- sorry Lou (Louis) Williams
+		player = "unknown"
+		ppg = 0
+		ppd = 0
+
+		if not(player_series.empty):
+
+			#games played
+			gp = float(player_series["G"])
+
+			#points
+	 		pts = float(player_series["PTS"])
+
+	 		#offensive rebounds
+			orb = float(player_series["ORB"])
+
+			#defensive rebounds
+	 		drb = float(player_series["DRB"])
+
+	 		#assists
+	 		ast = float(player_series["AST"])
+
+	 		#steals
+	 		stl = float(player_series["STL"])
+
+	 		#blocks
+	 		blk = float(player_series["BLK"])
+
+	 		#turnovers
+			tov = float(player_series["TOV"])
+
+			total_points = (pts * POINT) + ((orb + drb) * REBOUND) + (ast * ASSIST) + (stl * STEAL) + (blk * BLOCK) + (tov * TOV)
+			ppg = total_points / gp
+			player = player_series["Player"]
+			ppd = ppg / float(salary["Salary"][idx])
+
+		row = [player, player_series["Pos"], ppg, ppd, float(salary["Salary"][idx])]
+
+		list.append(row)
+
+	df = pandas.DataFrame(list, columns=["Player", "POS", "PPG", "PPD", "Salary"])
+	df_sort = df.sort_values(by="PPD", ascending=False)
+	df_out = df_sort[df_sort["PPD"] != 0]
+
+	return df_out
+
+#returns a list of best lineup according to greedy algorithm)
+def greedy_knap(avail_players):
+	#list is position, cap, count
+	PG = ["PG", PG_cap, 0, [], 0]
+	SG = ["SG", SG_cap, 0, [], 1]
+	SF = ["SF", SF_cap, 0, [], 2]
+	PF = ["PF", PF_cap, 0, [], 3]
+	C = ["C", C_cap, 0, [], 4]
+
+	squad = [PG, SG, SF, PF, C]
+
+	current_sal = 0
+
+	#first, get best players in terms of ppg
+	for i, row in avail_players.iterrows():
+		for position in squad:
+			#if it matches the position
+			if (row["POS"] == position[0]):
+				#if the position isn't full
+				if (position[1] > position[2]):
+					#if we can afford him
+					if (current_sal + row["Salary"] <= salary_cap):
+						#add him to the list for the position
+						position[3].append(row["Player"])
+						#increase current salary
+						current_sal += row["Salary"]
+						#increase number at position
+						position[2] += 1
+						#replace in squad
+						squad_pos = position[4]
+						squad[squad_pos] = position
+
+	#now, loop through again by PPD and replace lowest PPG player at a position with a player with higher PPG
+	#while staying under salary cap
+	#loops through player
+	for i, row in avail_players.iterrows():
+		for position in squad:
+			#if it matches the position
+			if (row["POS"] == position[0]):
+				#if there are two players at the position, find the one with lower PPG
+				player = ""
+				player_sal = 0
+				player_ppg = 0
+				player_slot = 0
+
+				if len(position[3]) == 2:
+					for players in position[3]:
+						#get player_1 row
+						player_1 = avail_players.loc[avail_players['Player'] == position[3][0]]
+						player_1_ppg = player_1["PPG"].values[0]
+
+						#get player 2 row and ppg
+						player_2 = avail_players.loc[avail_players['Player'] == position[3][1]]
+						player_2_ppg = player_2["PPG"].values[0]
+
+						if (player_1_ppg > player_2_ppg):
+							player = player_2["Player"]
+							player_sal = player_2["Salary"]
+							player_ppg = player_2["PPG"]
+							player_slot = 1
+
+						else:
+							player = player_1["Player"]
+							player_sal = player_1["Salary"]
+							player_ppg = player_1["PPG"]
+				
+				#if there's one player, just do that
+				else:
+					player_row = avail_players.loc[avail_players['Player'] == position[3][0]]
+					player = player_row["Player"]
+					player_sal = player_row["Salary"]
+					player_ppg = player_row["PPG"] 
+
+				#if the player's ppg is higher than the lowest at their position
+				player_ppg = player_ppg.values[0]
+				player_sal = player_sal.values[0]
+				player = player.values[0]
+
+				if (row["PPG"] > player_ppg):
+					#if we can afford him
+					if (row["Salary"] + current_sal - player_sal <= salary_cap):
+						#replace the player in the squad
+						current_sal = current_sal - player_sal + row["Salary"]
+						position[3][player_slot] = row["Player"]
+						squad_pos = position[4]
+						squad[squad_pos] = position
+
+	#get player names in a list
+	best_squad = []
+	for pos in squad:
+		for player in pos[3]:
+			best_squad.append(player)
+
+	return best_squad
+
+def stringify_lineup(line):
+	go_2 = range(2)
+	positions = ["Point Guards", "Shooting Guards", "Small Forwards", "Power Forwards"]
+
+	stringy_line = "Optimal FanDuel Lineup for Today \n \n"
+
+	counter = 0
+	for position in positions:
+		stringy_line += position
+		stringy_line += ": \n"
+		for player in go_2:
+			stringy_line += line[counter]
+			stringy_line += "\n"
+			counter += 1
+		stringy_line += "\n"
+
+	stringy_line += "Center:\n"
+	stringy_line += line[counter]
+	stringy_line += "\n"
+
+	return stringy_line
 		
+
 if __name__ == "__main__":
-	#check which algorithm
-	is_advanced = check_algorithm()
+
+	print "\nFetching NBA statistics and determining optimal lineup\n\n"
 
 	ctx = verify_false()
 	series_list = []
 	df_list = []
 
-	#only execute if advanced algorithm
-	if is_advanced:
-		off_rebounds_series = get_stat_series(opp_off_rebounds_url, ctx)
-		series_list.append(off_rebounds_series)
+	# off_rebounds_series = get_stat_series(opp_off_rebounds_url, ctx)
+	# series_list.append(off_rebounds_series)
 
-		def_rebounds_series = get_stat_series(opp_def_rebounds_url, ctx)
-		series_list.append(def_rebounds_series)
+	# def_rebounds_series = get_stat_series(opp_def_rebounds_url, ctx)
+	# series_list.append(def_rebounds_series)
 
-		opp_points_series = get_stat_series(opp_points_url, ctx)
-		series_list.append(opp_points_series)
+	# opp_points_series = get_stat_series(opp_points_url, ctx)
+	# series_list.append(opp_points_series)
 
-		opp_assists_series = get_stat_series(opp_assists_url, ctx)
-		series_list.append(opp_assists_series)
+	# opp_assists_series = get_stat_series(opp_assists_url, ctx)
+	# series_list.append(opp_assists_series)
 
-		opp_turnovers_series = get_stat_series(opp_turnovers_url, ctx)
-		series_list.append(opp_turnovers_series)
+	# opp_turnovers_series = get_stat_series(opp_turnovers_url, ctx)
+	# series_list.append(opp_turnovers_series)
 
-		opp_blocks_series = get_stat_series(opp_blocks_url, ctx)
-		series_list.append(opp_blocks_series)
+	# opp_blocks_series = get_stat_series(opp_blocks_url, ctx)
+	# series_list.append(opp_blocks_series)
 
-		opp_steals_series = get_stat_series(opp_steals_url, ctx)
-		series_list.append(opp_steals_series)
+	# opp_steals_series = get_stat_series(opp_steals_url, ctx)
+	# series_list.append(opp_steals_series)
 
-		# this contains all opponent stats for each category relevant for fantasy basketball
-		# columns, in order, are: 
-		# 'Opponent Offensive Rebounds per Game', 'Opponent Defensive Rebounds per Game', 
-		# 'Opponent Points per Game', 'Opponent Assists per Game', 'Opponent Turnovers per Game', 'Opponent Blocks per Game', 'Opponent Steals per Game'
-		# teams are in alphabetical order
-		opp_stat_df = pandas.concat(series_list, axis=1)
-		opp_stat_desc = get_desc_stats(opp_stat_df)
-		df_list.append(opp_stat_df)
-		df_list.append(opp_stat_desc)
+	# this contains all opponent stats for each category relevant for fantasy basketball
+	# columns, in order, are: 
+	# 'Opponent Offensive Rebounds per Game', 'Opponent Defensive Rebounds per Game', 
+	# 'Opponent Points per Game', 'Opponent Assists per Game', 'Opponent Turnovers per Game', 'Opponent Blocks per Game', 'Opponent Steals per Game'
+	# teams are in alphabetical order
+	# opp_stat_df = pandas.concat(series_list, axis=1)
+	# opp_stat_desc = get_desc_stats(opp_stat_df)
+	# df_list.append(opp_stat_df)
+	# df_list.append(opp_stat_desc)
 
 	#call method to get season stats for each player
 	season_df = get_season_stats(season_stat_url, ctx)
@@ -215,10 +371,20 @@ if __name__ == "__main__":
 	df_list.append(salary_df)
 	df_list.append(salary_desc_df)
 
-	if is_advanced:
-		print "not done yet"
-	else:
-		print "not done yet"
+	#general approach for next part
+	#get each player with position, and all scorable categories
+	#find expected points scored, and choose best lineup with greedy algorithm (prioritizing for points per game)
+
+	ppg_simple_df = get_simple_ppg(season_df, salary_df)
+
+	lineup = greedy_knap(ppg_simple_df)
+
+	pretty_lineup = stringify_lineup(lineup)
+
+	print pretty_lineup
+
+
+
 
 
 
