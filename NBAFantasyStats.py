@@ -4,6 +4,7 @@ import csv
 import pandas
 import ssl
 from sys import version_info
+from selenium import webdriver
 
 #website urls
 opp_off_rebounds_url = "https://www.teamrankings.com/nba/stat/opponent-offensive-rebounds-per-game"
@@ -378,17 +379,9 @@ def manual_injury(ppg, line):
 # 	return season_df
 
 def get_last_10(url, ctx):
-	soup = soupify(url, ctx)
+	driver = webdriver.Firefox()
+	driver.get(url)
 
-	print soup
-
-	#get rows
-	rows = soup.find_all('tr', class_ = "ng-scope")
-	data = []
-	for row in rows:
-		cols = row.find_all('td')
-		data_row = []
-		print row
 
 
 
