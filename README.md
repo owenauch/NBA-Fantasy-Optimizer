@@ -1,2 +1,1 @@
-# Python-Web-Scraping
-Repository for various web scraping projects
+# NBA Daily Fantasy Lineup Optimizer
