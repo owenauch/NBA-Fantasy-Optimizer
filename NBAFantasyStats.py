@@ -16,7 +16,6 @@ opp_steals_url = "https://www.teamrankings.com/nba/stat/opponent-steals-per-game
 season_stat_url = "http://www.basketball-reference.com/leagues/NBA_2017_totals.html"
 season_advanced_url = "http://www.basketball-reference.com/leagues/NBA_2017_advanced.html"
 salary_url = "http://www.rotowire.com/daily/nba/optimizer.php?site=FanDuel&sport=NBA"
-last_10_url = "http://stats.nba.com/players/traditional/#!?PerMode=Totals&sort=PTS&dir=-1&Season=2016-17&SeasonType=Regular%20Season&LastNGames=10"
 
 #FanDuel points per stat
 POINT = 1
@@ -343,56 +342,6 @@ def manual_injury(ppg, line):
 
 		  	print stringify_lineupy(greedy_knap(ppg))
 
-# def get_season_stats(url, ctx):
-# 	season_soup = soupify(url, ctx)
-
-# 	#get column names
-# 	column_names = []
-# 	table = season_soup.find('table', class_="stats_table")
-# 	table_head = table.find('thead')
-# 	tr = table_head.find('tr')
-# 	for col in tr.find_all("th"):
-# 		column_names.append(col.find(text=True))
-
-# 	#get rid of rank, will be index
-# 	del column_names[0]
-
-# 	#get data in list matrix
-# 	#make sure to cast strings to floats
-# 	rows = season_soup.find_all('tr', class_ = "full_table")
-# 	season_data = []
-# 	for row in rows:
-# 		cols = row.find_all('td')
-# 		season_data_row = []
-# 		for col in cols[0:4]:
-# 			season_data_row.append(col.find(text=True))
-# 		for col in cols[4:]:
-# 			stat = col.find(text=True)
-# 			if stat is None:
-# 				stat = 0.0
-# 			season_data_row.append(float(stat))
-# 		season_data.append(season_data_row)
-
-# 	#make into pandas dataframe
-# 	season_df = pandas.DataFrame(season_data, columns=column_names)
-# 	return season_df
-
-def get_last_10(url, ctx):
-	soup = soupify(url, ctx)
-
-	print soup
-
-	#get rows
-	rows = soup.find_all('tr', class_ = "ng-scope")
-	data = []
-	for row in rows:
-		cols = row.find_all('td')
-		data_row = []
-		print row
-
-
-
-
 		
 
 if __name__ == "__main__":
@@ -434,11 +383,11 @@ if __name__ == "__main__":
 	# df_list.append(opp_stat_df)
 	# df_list.append(opp_stat_desc)
 
-	# #call method to get season stats for each player
-	# season_df = get_season_stats(season_stat_url, ctx)
-	# season_desc_df = get_desc_stats(season_df)
-	# df_list.append(season_df)
-	# df_list.append(season_desc_df)
+	#call method to get season stats for each player
+	season_df = get_season_stats(season_stat_url, ctx)
+	season_desc_df = get_desc_stats(season_df)
+	df_list.append(season_df)
+	df_list.append(season_desc_df)
 
 	#call method to get advanced stats for each player
 	# season_advanced_df = get_season_stats(season_advanced_url, ctx)
@@ -452,23 +401,19 @@ if __name__ == "__main__":
 	df_list.append(salary_df)
 	df_list.append(salary_desc_df)
 
-	#get stats from last 10 games to replace season stats
-	last_10_df = get_last_10(last_10_url, ctx)
-	df_list.append(last_10_df)
-
 	#general approach for next part
 	#get each player with position, and all scorable categories
 	#find expected points scored, and choose best lineup with greedy algorithm (prioritizing for points per game)
 
-	# ppg_simple_df = get_simple_ppg(season_df, salary_df)
+	ppg_simple_df = get_simple_ppg(season_df, salary_df)
 
-	# lineup = greedy_knap(ppg_simple_df)
+	lineup = greedy_knap(ppg_simple_df)
 
-	# pretty_lineup = stringify_lineup(lineup)
+	pretty_lineup = stringify_lineup(lineup)
 
-	# print pretty_lineup
+	print pretty_lineup
 
-	# uninjured_pretty = manual_injury(ppg_simple_df, pretty_lineup)
+	uninjured_pretty = manual_injury(ppg_simple_df, pretty_lineup)
 
 
 
