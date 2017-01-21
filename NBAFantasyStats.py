@@ -340,7 +340,7 @@ def manual_injury(ppg, line):
 
 		  	ppg = ppg[ppg["Player"] != player]
 
-		  	print stringify_lineupy(greedy_knap(ppg))
+		  	print stringify_lineup(greedy_knap(ppg))
 
 		
 
