@@ -1,3 +1,5 @@
+#Author: Owen Auch
+
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 import csv
@@ -32,6 +34,9 @@ SG_cap = 2
 SF_cap = 2
 PF_cap = 2
 C_cap = 1
+
+#team name abbreviations
+abbrevs = ["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DAL", "DEN", "DET", "GSW", "HOU", "IND", "LAC", "LAL", "MEM", "MIA", "MIL", "MIN", "NOP", "NY", "OKC", "ORL", "PHI", "PHO", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"]
 
 #verify set to false (not secure but doesn't really matter for this)
 def verify_false():
@@ -124,10 +129,16 @@ def get_current_salary(url, ctx):
 			salary = (row.find('td', class_ = "rwo-salary")["data-salary"])
 			salary = salary.replace(",","")
 			salary_data_row.append(float(salary))
+
+
+			opponent = row.find('td', class_ = "rwo-opp").find(text=True)
+			opponent = opponent.replace("@", "")
+			salary_data_row.append(opponent)
+
 			salary_data.append(salary_data_row)
 		counter += 1	
 
-	salary_df = pandas.DataFrame(salary_data, columns = ["Player", "Salary"])
+	salary_df = pandas.DataFrame(salary_data, columns = ["Player", "Salary", "Opponent"])
 	return salary_df
 
 #get mean, standard error dataframe for a dataframe
@@ -181,7 +192,7 @@ def get_simple_ppg(season, salary):
 	 		#turnovers
 			tov = float(player_series["TOV"])
 
-			total_points = (pts * POINT) + ((orb + drb) * REBOUND) + (ast * ASSIST) + (stl * STEAL) + (blk * BLOCK) + (tov * TOV)
+			total_points = (pts * POINT) + ((orb + drb) * REBOUND) + (ast * ASSIST) + (stl * STEAL) + (blk * BLOCK) + (tov * TOV)			
 			ppg = total_points / gp
 			player = player_series["Player"]
 			ppd = ppg / float(salary["Salary"][idx])
@@ -193,6 +204,7 @@ def get_simple_ppg(season, salary):
 	df = pandas.DataFrame(list, columns=["Player", "POS", "PPG", "PPD", "Salary"])
 	df_sort = df.sort_values(by="PPD", ascending=False)
 	df_out = df_sort[df_sort["PPD"] != 0]
+
 
 	return df_out
 
@@ -340,9 +352,97 @@ def manual_injury(ppg, line):
 
 		  	ppg = ppg[ppg["Player"] != player]
 
-		  	print stringify_lineupy(greedy_knap(ppg))
+		  	print stringify_lineup(greedy_knap(ppg))
 
-		
+#adjusts based on defense but for some reason it breaks the selection algorithm
+def get_ppg_adjusted(season, salary, opp_stat_df):
+	#merge salary and season together
+	season_salary = pandas.merge(season, salary, on="Player")
+
+	list = []
+
+	for idx, player in season_salary.iterrows():
+
+		#screen out ones where it doesn't match -- sorry Lou (Louis) Williams
+		man = "unknown"
+		ppg = 0
+		ppd = 0
+
+		if not (player.empty):
+			opp_team = player["Opponent"]
+
+			opp_series = opp_stat_df.loc[opp_stat_df['Opponent'] == opp_team].squeeze()
+
+			#games played
+			gp = player["G"]
+
+			#points
+			pts = player["PTS"] / gp
+			pts_mean = opp_stat_df["Opponent Points per Game"].mean()
+			opp_pts = opp_series["Opponent Points per Game"]
+			adj_pts = (opp_pts - pts_mean) * (pts / pts_mean) + pts
+
+			#offensive rebounds
+			orb = player["ORB"] / gp
+			orb_mean = opp_stat_df["Opponent Offensive Rebounds per Game"].mean()
+			opp_orb = opp_series["Opponent Offensive Rebounds per Game"]
+			adj_orb = (opp_orb - orb_mean) * (orb / orb_mean) + orb
+
+			#defensive rebounds
+			drb = player["DRB"] / gp
+			drb_mean = opp_stat_df["Opponent Defensive Rebounds per Game"].mean()
+			opp_drb = opp_series["Opponent Defensive Rebounds per Game"]
+			adj_drb = (opp_drb - drb_mean) * (drb / drb_mean) + drb
+
+			#assists
+			ast = player["AST"] / gp
+			ast_mean = opp_stat_df["Opponent Assists per Game"].mean()
+			opp_ast = opp_series["Opponent Assists per Game"]
+			adj_ast = (opp_ast - ast_mean) * (ast / ast_mean) + ast
+
+			#steals
+			stl = player["STL"] / gp
+			stl_mean = opp_stat_df["Opponent Steals per Game"].mean()
+			opp_stl = opp_series["Opponent Steals per Game"]
+			adj_stl = (opp_stl - stl_mean) * (stl / stl_mean) + stl
+
+			#turnovers
+			tov = player["TOV"] / gp
+			tov_mean = opp_stat_df["Opponent Turnovers per Game"].mean()
+			opp_tov = opp_series["Opponent Turnovers per Game"]
+			adj_tov = (opp_tov - tov_mean) * (tov / tov_mean) + tov
+
+			#blocks
+			blk = player["BLK"] / gp
+			blk_mean = opp_stat_df["Opponent Blocks per Game"].mean()
+			opp_blk = opp_series["Opponent Blocks per Game"]
+			adj_blk = (opp_blk - blk_mean) * (blk / blk_mean) + blk
+
+			ppg = (adj_pts * POINT) + ((adj_orb + adj_drb) * REBOUND) + (adj_ast * ASSIST) + (adj_stl * STEAL) + (adj_blk * BLOCK) + (adj_tov * TOV)
+			man = player["Player"]
+			ppd = ppg / float(salary["Salary"][idx])
+
+			dump = True
+			for i, row in salary.iterrows():
+				if (man == row["Player"]):
+					dump = False
+
+
+			if dump:
+				ppd = 0
+
+		row = [man, player["Pos"], ppg, ppd, float(season_salary["Salary"][idx])]	
+
+
+		list.append(row)
+
+	df = pandas.DataFrame(list, columns=["Player", "POS", "PPG", "PPD", "Salary"])
+	df_sort = df.sort_values(by="PPD", ascending=False)
+	df_out = df_sort[df_sort["PPD"] != 0]
+
+	return df_out
+
+
 
 if __name__ == "__main__":
 
@@ -352,42 +452,38 @@ if __name__ == "__main__":
 	series_list = []
 	df_list = []
 
-	# off_rebounds_series = get_stat_series(opp_off_rebounds_url, ctx)
-	# series_list.append(off_rebounds_series)
+	off_rebounds_series = get_stat_series(opp_off_rebounds_url, ctx)
+	series_list.append(off_rebounds_series)
 
-	# def_rebounds_series = get_stat_series(opp_def_rebounds_url, ctx)
-	# series_list.append(def_rebounds_series)
+	def_rebounds_series = get_stat_series(opp_def_rebounds_url, ctx)
+	series_list.append(def_rebounds_series)
 
-	# opp_points_series = get_stat_series(opp_points_url, ctx)
-	# series_list.append(opp_points_series)
+	opp_points_series = get_stat_series(opp_points_url, ctx)
+	series_list.append(opp_points_series)
 
-	# opp_assists_series = get_stat_series(opp_assists_url, ctx)
-	# series_list.append(opp_assists_series)
+	opp_assists_series = get_stat_series(opp_assists_url, ctx)
+	series_list.append(opp_assists_series)
 
-	# opp_turnovers_series = get_stat_series(opp_turnovers_url, ctx)
-	# series_list.append(opp_turnovers_series)
+	opp_turnovers_series = get_stat_series(opp_turnovers_url, ctx)
+	series_list.append(opp_turnovers_series)
 
-	# opp_blocks_series = get_stat_series(opp_blocks_url, ctx)
-	# series_list.append(opp_blocks_series)
+	opp_blocks_series = get_stat_series(opp_blocks_url, ctx)
+	series_list.append(opp_blocks_series)
 
-	# opp_steals_series = get_stat_series(opp_steals_url, ctx)
-	# series_list.append(opp_steals_series)
+	opp_steals_series = get_stat_series(opp_steals_url, ctx)
+	series_list.append(opp_steals_series)
 
 	# this contains all opponent stats for each category relevant for fantasy basketball
 	# columns, in order, are: 
 	# 'Opponent Offensive Rebounds per Game', 'Opponent Defensive Rebounds per Game', 
 	# 'Opponent Points per Game', 'Opponent Assists per Game', 'Opponent Turnovers per Game', 'Opponent Blocks per Game', 'Opponent Steals per Game'
 	# teams are in alphabetical order
-	# opp_stat_df = pandas.concat(series_list, axis=1)
-	# opp_stat_desc = get_desc_stats(opp_stat_df)
-	# df_list.append(opp_stat_df)
-	# df_list.append(opp_stat_desc)
-
+	opp_stat_df = pandas.concat(series_list, axis=1)
+	opp_stat_df['Opponent'] = pandas.Series(abbrevs, index=opp_stat_df.index)
+	df_list.append(opp_stat_df)
 	#call method to get season stats for each player
 	season_df = get_season_stats(season_stat_url, ctx)
-	season_desc_df = get_desc_stats(season_df)
 	df_list.append(season_df)
-	df_list.append(season_desc_df)
 
 	#call method to get advanced stats for each player
 	# season_advanced_df = get_season_stats(season_advanced_url, ctx)
@@ -399,11 +495,13 @@ if __name__ == "__main__":
 	salary_df = get_current_salary(salary_url, ctx)
 	salary_desc_df = get_desc_stats(salary_df)
 	df_list.append(salary_df)
-	df_list.append(salary_desc_df)
+
+	#adjust stats based on opponent
+	ppg_adjusted_df = get_ppg_adjusted(season_df, salary_df, opp_stat_df)
 
 	#general approach for next part
 	#get each player with position, and all scorable categories
-	#find expected points scored, and choose best lineup with greedy algorithm (prioritizing for points per game)
+	#choose most undervalued players first, then optimize for max ppg expected under salary cap
 
 	ppg_simple_df = get_simple_ppg(season_df, salary_df)
 
@@ -413,7 +511,7 @@ if __name__ == "__main__":
 
 	print pretty_lineup
 
-	uninjured_pretty = manual_injury(ppg_simple_df, pretty_lineup)
+	manual_injury(ppg_simple_df, pretty_lineup)
 
 
 
