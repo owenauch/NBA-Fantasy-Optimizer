@@ -1,5 +1,6 @@
 #The Porzingis Script
 #Author: Owen Auch
+#Philippians 3:8
 
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
@@ -128,7 +129,7 @@ def get_current_salary(url, ctx):
 			salary = salary.replace(",","")
 			salary_data_row.append(float(salary))
 			salary_data.append(salary_data_row)
-		counter += 1	
+		counter += 1
 
 	salary_df = pandas.DataFrame(salary_data, columns = ["Player", "Salary"])
 	return salary_df
@@ -140,7 +141,7 @@ def get_desc_stats(df):
 	stdevs = df.std()
 	stdevs = stdevs.rename("stdev")
 	desc_stats = pandas.concat([means, stdevs], axis=1)
-	return desc_stats	
+	return desc_stats
 
 #gets df of players playing tonight with "Player", "POS", "PPG", "Salary" columns
 def get_simple_ppg(season, salary):
@@ -273,7 +274,7 @@ def greedy_knap(avail_players):
 					player_row = avail_players.loc[avail_players['Player'] == position[3][0]]
 					player = player_row["Player"]
 					player_sal = player_row["Salary"]
-					player_ppg = player_row["PPG"] 
+					player_ppg = player_row["PPG"]
 					other_player = player_row
 
 				#if the player's ppg is higher than the lowest at their position
@@ -345,7 +346,7 @@ def manual_injury(ppg, line):
 
 		  	print stringify_lineup(greedy_knap(ppg))
 
-		
+
 
 if __name__ == "__main__":
 
@@ -377,8 +378,8 @@ if __name__ == "__main__":
 	# series_list.append(opp_steals_series)
 
 	# this contains all opponent stats for each category relevant for fantasy basketball
-	# columns, in order, are: 
-	# 'Opponent Offensive Rebounds per Game', 'Opponent Defensive Rebounds per Game', 
+	# columns, in order, are:
+	# 'Opponent Offensive Rebounds per Game', 'Opponent Defensive Rebounds per Game',
 	# 'Opponent Points per Game', 'Opponent Assists per Game', 'Opponent Turnovers per Game', 'Opponent Blocks per Game', 'Opponent Steals per Game'
 	# teams are in alphabetical order
 	# opp_stat_df = pandas.concat(series_list, axis=1)
@@ -417,9 +418,3 @@ if __name__ == "__main__":
 	print pretty_lineup
 
 	uninjured_pretty = manual_injury(ppg_simple_df, pretty_lineup)
-
-
-
-
-
-
