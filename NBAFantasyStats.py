@@ -19,7 +19,7 @@ opp_blocks_url = "https://www.teamrankings.com/nba/stat/opponent-blocks-per-game
 opp_steals_url = "https://www.teamrankings.com/nba/stat/opponent-steals-per-game"
 season_stat_url = "http://www.basketball-reference.com/leagues/NBA_2017_totals.html"
 season_advanced_url = "http://www.basketball-reference.com/leagues/NBA_2017_advanced.html"
-salary_url = "http://www.rotowire.com/daily/nba/optimizer.php?site=FanDuel&sport=NBA"
+salary_url = "http://hoopshype.com/salaries/players/"
 
 #FanDuel points per stat
 POINT = 1
@@ -30,7 +30,7 @@ BLOCK = 2
 TOV = -1
 
 #2 PG, 2 SG, 2 SF, 2 PF, 1 C
-salary_cap = 60000
+salary_cap = 999999999999999999999999
 PG_cap = 2
 SG_cap = 2
 SF_cap = 2
@@ -114,7 +114,7 @@ def get_season_stats(url, ctx):
 def get_current_salary(url, ctx):
 	salary_soup = soupify(url, ctx)
 
-	table = salary_soup.find('table', class_ = "rwo-playertable")
+	table = salary_soup.find('table', class_ = "hh-salaries-ranking-table")
 	rows = table.find_all('tr')
 	salary_data = []
 	#because it's weird
@@ -123,9 +123,10 @@ def get_current_salary(url, ctx):
 		if counter > 0:
 			salary_data_row = []
 			#add player name
-			salary_data_row.append(row.find("a", class_ = "dplayer-link").find(text=True))
+			player_name = row.find("a").find(text=True)
+			salary_data_row.append(player_name.strip())
 			#add salary
-			salary = (row.find('td', class_ = "rwo-salary")["data-salary"])
+			salary = (row.find('td', class_ = "hh-salaries-sorted")["data-value"])
 			salary = salary.replace(",","")
 			salary_data_row.append(float(salary))
 			salary_data.append(salary_data_row)
